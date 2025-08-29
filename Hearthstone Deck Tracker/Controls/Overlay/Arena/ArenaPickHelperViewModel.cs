@@ -1257,7 +1257,7 @@ public class ArenaPickHelperViewModel : ViewModel
 		AccountId accountId,
 		bool isUnderground)
 	{
-		var parameters = new ArenaScoreDeckParams(heroCardId) {
+		var parameters = new ArenaScoreDeckParams(heroCardId, new List<string>()) {
 			ArenaSeason = arenaSeasonId,
 			PlayerRegion = (int)Helper.GetRegion(accountId.Hi),
 			AccountLo = accountId.Lo,
