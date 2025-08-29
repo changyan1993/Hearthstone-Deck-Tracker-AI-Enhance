@@ -1,0 +1,17 @@
+  Determining projects to restore...
+C:\Program Files (x86)\AI_Stone\Hearthstone-Deck-Tracker\Hearthstone Deck Tracker\Hearthstone Deck Tracker.csproj : warning NU1903: Package 'Newtonsoft.Json' 12.0.3 has a known high severity vulnerability, https://github.com/advisories/GHSA-5crp-9r3c-p9vr
+C:\Program Files (x86)\AI_Stone\Hearthstone-Deck-Tracker\Hearthstone Deck Tracker\Hearthstone Deck Tracker.csproj : warning NU1902: Package 'SharpCompress' 0.17.1 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-fxh6-w476-hgr4
+C:\Program Files (x86)\AI_Stone\Hearthstone-Deck-Tracker\Hearthstone Deck Tracker\Hearthstone Deck Tracker.csproj : warning NU1902: Package 'SharpCompress' 0.17.1 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-jp7f-grcv-6mjf
+  All projects are up-to-date for restore.
+C:\Program Files (x86)\AI_Stone\Hearthstone-Deck-Tracker\Hearthstone Deck Tracker\Hearthstone Deck Tracker.csproj(50,5): error : ResGen.exe not supported on .NET Core MSBuild
+
+Build FAILED.
+
+C:\Program Files (x86)\AI_Stone\Hearthstone-Deck-Tracker\Hearthstone Deck Tracker\Hearthstone Deck Tracker.csproj : warning NU1903: Package 'Newtonsoft.Json' 12.0.3 has a known high severity vulnerability, https://github.com/advisories/GHSA-5crp-9r3c-p9vr
+C:\Program Files (x86)\AI_Stone\Hearthstone-Deck-Tracker\Hearthstone Deck Tracker\Hearthstone Deck Tracker.csproj : warning NU1902: Package 'SharpCompress' 0.17.1 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-fxh6-w476-hgr4
+C:\Program Files (x86)\AI_Stone\Hearthstone-Deck-Tracker\Hearthstone Deck Tracker\Hearthstone Deck Tracker.csproj : warning NU1902: Package 'SharpCompress' 0.17.1 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-jp7f-grcv-6mjf
+C:\Program Files (x86)\AI_Stone\Hearthstone-Deck-Tracker\Hearthstone Deck Tracker\Hearthstone Deck Tracker.csproj(50,5): error : ResGen.exe not supported on .NET Core MSBuild
+    3 Warning(s)
+    1 Error(s)
+
+Time Elapsed 00:00:00.78
