@@ -1,4 +1,10 @@
-## **Release v1.46.10 - 2025-08-21**
+## **Release v1.46.12 - 2025-08-29**
+**Hearthstone**:
+- Fixed a crash issue with integrated Intel GPUs caused by "Out of Memory" errors in HDT. Hardware Acceleration for HDT is now disabled by default for affected GPUs and is also available as a configurable setting for all users.
+- Fixed an issue where opponent's rest in peace related cards would display the heroes swapped.
+- Fixed an issue where counters were not correctly appearing/disappearing during discover phase.
+
+## **Release v1.46.11 - 2025-08-21**
 **Arenasmith**:
 - Fixed an issue where some messages would not correctly display the card names.
 
