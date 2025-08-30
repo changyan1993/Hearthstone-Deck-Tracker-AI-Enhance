@@ -31,7 +31,7 @@ namespace BattlegroundsLogger
         public int Gold { get; set; }
 
         [JsonProperty("health")]
-        public int Health { get; set; }
+        public int? Health { get; set; }
 
         [JsonProperty("armor")]
         public int Armor { get; set; }

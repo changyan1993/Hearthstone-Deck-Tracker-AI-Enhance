@@ -46,18 +46,48 @@ namespace BattlegroundsLogger
         {
             try
             {
+                // Get the player entity for gold and tavern tier
                 var playerEntity = game.Entities.Values.FirstOrDefault(e => 
                     e.IsPlayer && e.IsControlledBy(game.Player.Id));
 
+                // Get the hero entity for health and armor
+                var playerHero = game.Entities.Values.FirstOrDefault(e =>
+                    e.IsHero && e.IsInZone(Zone.PLAY) && e.IsControlledBy(game.Player.Id));
+
+                if (playerHero != null)
+                {
+                    var health = playerHero.GetTag(HEALTH) - playerHero.GetTag(DAMAGE);
+                    // If health is 0 or negative, set to null and add warning
+                    if (health <= 0)
+                    {
+                        snapshot.Health = null;
+                        if (snapshot.Notes == null) snapshot.Notes = "";
+                        snapshot.Notes += (snapshot.Notes.Length > 0 ? "; " : "") + "missing player health";
+                    }
+                    else
+                    {
+                        snapshot.Health = health;
+                    }
+                    
+                    snapshot.Armor = playerHero.GetTag(ARMOR);
+                }
+                else
+                {
+                    // Hero entity not found
+                    snapshot.Health = null;
+                    if (snapshot.Notes == null) snapshot.Notes = "";
+                    snapshot.Notes += (snapshot.Notes.Length > 0 ? "; " : "") + "missing player health";
+                }
+
                 if (playerEntity != null)
                 {
-                    snapshot.Health = playerEntity.GetTag(HEALTH) - playerEntity.GetTag(DAMAGE);
-                    snapshot.Armor = playerEntity.GetTag(ARMOR);
                     snapshot.TavernTier = playerEntity.GetTag(PLAYER_TECH_LEVEL);
                     
+                    // Gold in Battlegrounds = RESOURCES + TEMP_RESOURCES - RESOURCES_USED
                     var resources = playerEntity.GetTag(RESOURCES);
+                    var tempResources = playerEntity.GetTag(TEMP_RESOURCES);
                     var resourcesUsed = playerEntity.GetTag(RESOURCES_USED);
-                    snapshot.Gold = Math.Max(0, resources - resourcesUsed);
+                    snapshot.Gold = Math.Max(0, resources + tempResources - resourcesUsed);
                 }
 
                 var bobsShop = game.Entities.Values.FirstOrDefault(e =>
@@ -133,7 +163,8 @@ namespace BattlegroundsLogger
                 if (availableRaces != null)
                 {
                     snapshot.AvailableTribes = availableRaces
-                        .Select(r => r.ToString().ToUpperInvariant())
+                        .Select(r => NormalizeTribeName(r.ToString()))
+                        .Where(t => t != "NEUTRAL")
                         .ToList();
                 }
             }
@@ -147,14 +178,24 @@ namespace BattlegroundsLogger
         {
             try
             {
+                var playerId = game.PlayerEntity?.GetTag(PLAYER_ID) ?? game.Player.Id;
+                
+                // Use DeepBattlerPlugin's proven approach for shop minions (TavernEntities)
                 var shopMinions = game.Entities.Values
-                    .Where(e => e.IsMinion && e.IsInZone(Zone.PLAY) && 
-                           e.GetTag(ZONE_POSITION) > 0 &&
-                           (e.GetTag(CONTROLLER) == game.Player.Id || 
-                            e.CardId?.StartsWith("TB_BaconShop") == true))
-                    .Where(e => e.GetTag(GameTag.IS_BACON_POOL_MINION) == 1)
+                    .Where(e => e.GetTag(ZONE) == (int)Zone.PLAY &&
+                               e.Card != null &&
+                               !string.IsNullOrEmpty(e.Card.Name) &&
+                               e.GetTag(GameTag.IS_BACON_POOL_MINION) == 1 &&
+                               e.GetTag(CONTROLLER) != playerId &&
+                               e.GetTag(CARDTYPE) == (int)CardType.MINION)
                     .OrderBy(e => e.GetTag(ZONE_POSITION))
                     .ToList();
+
+                Log.Info($"[BG-Logger] Found {shopMinions.Count} shop minions using DeepBattler approach");
+                foreach (var minion in shopMinions)
+                {
+                    Log.Info($"[BG-Logger] Shop minion: {minion.Card?.Name ?? minion.CardId} (ID:{minion.Id}, Controller:{minion.GetTag(CONTROLLER)}, Pos:{minion.GetTag(ZONE_POSITION)})");
+                }
 
                 int position = 1;
                 foreach (var minion in shopMinions)
@@ -174,12 +215,19 @@ namespace BattlegroundsLogger
         {
             try
             {
-                var boardMinions = game.Entities.Values
-                    .Where(e => e.IsMinion && e.IsInZone(Zone.PLAY) && 
-                           e.IsControlledBy(game.Player.Id) &&
-                           e.GetTag(GameTag.IS_BACON_POOL_MINION) != 1)
+                // Use DeepBattlerPlugin's proven approach for board minions (Warband)
+                var boardMinions = game.Player.Board
+                    .Where(e => e.GetTag(ZONE) == (int)Zone.PLAY &&
+                               e.GetTag(CARDTYPE) == (int)CardType.MINION &&
+                               e.Card != null)
                     .OrderBy(e => e.GetTag(ZONE_POSITION))
                     .ToList();
+
+                Log.Info($"[BG-Logger] Found {boardMinions.Count} board minions using DeepBattler approach");
+                foreach (var minion in boardMinions)
+                {
+                    Log.Info($"[BG-Logger] Board minion: {minion.Card?.Name ?? minion.CardId} (ID:{minion.Id}, Zone:{minion.GetTag(ZONE)}, Pos:{minion.GetTag(ZONE_POSITION)})");
+                }
 
                 int position = 1;
                 foreach (var minion in boardMinions)
@@ -241,31 +289,69 @@ namespace BattlegroundsLogger
         {
             try
             {
+                string rawTribe = null;
+                
                 if (entity.Card?.Race != null)
                 {
                     try 
                     {
                         if (Enum.TryParse<Race>(entity.Card.Race.ToString(), out var cardRace) && cardRace != Race.INVALID)
                         {
-                            return cardRace.ToString().ToUpperInvariant();
+                            rawTribe = cardRace.ToString().ToUpperInvariant();
                         }
                     }
                     catch { }
                 }
 
-                var tribeTag = entity.GetTag(CARDRACE);
-                if (tribeTag > 0)
+                if (rawTribe == null)
                 {
-                    var race = (Race)tribeTag;
-                    if (race != Race.INVALID)
-                        return race.ToString().ToUpperInvariant();
+                    var tribeTag = entity.GetTag(CARDRACE);
+                    if (tribeTag > 0)
+                    {
+                        var race = (Race)tribeTag;
+                        if (race != Race.INVALID)
+                            rawTribe = race.ToString().ToUpperInvariant();
+                    }
                 }
 
-                return "NEUTRAL";
+                // Normalize tribe names to match requirements
+                return NormalizeTribeName(rawTribe);
             }
             catch
             {
                 return "NEUTRAL";
+            }
+        }
+
+        private static string NormalizeTribeName(string rawTribe)
+        {
+            if (string.IsNullOrEmpty(rawTribe))
+                return "NEUTRAL";
+
+            switch (rawTribe.ToUpperInvariant())
+            {
+                case "MECHANICAL":
+                    return "MECH";
+                case "BEAST":
+                    return "BEAST";
+                case "MURLOC":
+                    return "MURLOC";
+                case "DRAGON":
+                    return "DRAGON";
+                case "DEMON":
+                    return "DEMON";
+                case "ELEMENTAL":
+                    return "ELEMENTAL";
+                case "PIRATE":
+                    return "PIRATE";
+                case "NAGA":
+                    return "NAGA";
+                case "UNDEAD":
+                    return "UNDEAD";
+                case "QUILBOAR":
+                    return "QUILBOAR";
+                default:
+                    return "NEUTRAL";
             }
         }
 

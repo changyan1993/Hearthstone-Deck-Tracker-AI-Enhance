@@ -61,7 +61,22 @@ The Battlegrounds Logger plugin has been successfully built, tested, and install
 - Saves JSON files to `Documents\BG-AI-Logs\` directory
 - Visual indicator shows recording status
 
-### 3. Handle HDT Updates
+### 3. Log File Location
+**Full Path:** `C:\Users\chang\OneDrive\Documents\BG-AI-Logs\`
+
+**Current Session Example:** 
+```
+C:\Users\chang\OneDrive\Documents\BG-AI-Logs\BG-2025-08-29_23-10-03_dd8032ea\
+├── turn_01.json  ← Turn 1 shop phase data
+├── turn_02.json  ← Turn 2 shop phase data  
+└── (more turns as you continue playing)
+```
+
+**Quick Access:**
+- Windows + R → `%USERPROFILE%\OneDrive\Documents\BG-AI-Logs`
+- Or search "BG-AI-Logs" in Windows Search
+
+### 4. Handle HDT Updates
 - Let HDT update normally when prompted
 - If plugin stops working after HDT update:
   - Run `SIMPLE_BUILD.bat` to rebuild against new HDT version

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Windows.Controls;
@@ -18,6 +19,7 @@ namespace BattlegroundsLogger
         private bool _isInShopPhase;
         private int _lastRecordedTurn = -1;
         private DateTime _lastWriteTime = DateTime.MinValue;
+        private List<string> _lastShopMinions = new List<string>();
         private const int WriteThrottleMs = 500;
         private StatusOverlay _statusOverlay;
 
@@ -98,17 +100,27 @@ namespace BattlegroundsLogger
                 if (_statusOverlay != null)
                     _statusOverlay.SetStatus(LoggerStatus.Recording, currentTurn);
 
-                if (IsInShopPhase() && currentTurn != _lastRecordedTurn)
+                if (IsInShopPhase())
                 {
-                    if (DateTime.Now - _lastWriteTime < TimeSpan.FromMilliseconds(WriteThrottleMs))
-                        return;
+                    // Check if turn changed OR shop contents changed
+                    var currentShopMinions = GetCurrentShopMinionIds();
+                    bool turnChanged = currentTurn != _lastRecordedTurn;
+                    bool shopChanged = !currentShopMinions.SequenceEqual(_lastShopMinions);
+                    
+                    if (turnChanged || shopChanged)
+                    {
+                        if (DateTime.Now - _lastWriteTime < TimeSpan.FromMilliseconds(WriteThrottleMs))
+                            return;
 
-                    if (_statusOverlay != null)
-                        _statusOverlay.SetStatus(LoggerStatus.Saving, currentTurn);
-                        
-                    RecordShopPhaseSnapshot(currentTurn);
-                    _lastRecordedTurn = currentTurn;
-                    _lastWriteTime = DateTime.Now;
+                        if (_statusOverlay != null)
+                            _statusOverlay.SetStatus(LoggerStatus.Saving, currentTurn);
+                            
+                        Log.Info($"[BG-Logger] Recording snapshot - Turn changed: {turnChanged}, Shop changed: {shopChanged}");
+                        RecordShopPhaseSnapshot(currentTurn);
+                        _lastRecordedTurn = currentTurn;
+                        _lastShopMinions = currentShopMinions;
+                        _lastWriteTime = DateTime.Now;
+                    }
                 }
             }
             catch (Exception ex)
@@ -236,9 +248,8 @@ namespace BattlegroundsLogger
             if (game == null)
                 return -1;
 
-            var turnNumber = game.GetTurnNumber();
-            
-            return (turnNumber + 1) / 2;
+            // GetTurnNumber() already returns the proper Battlegrounds turn
+            return game.GetTurnNumber();
         }
 
         private void LoadConfiguration()
@@ -275,6 +286,37 @@ namespace BattlegroundsLogger
             catch (Exception ex)
             {
                 Log.Error($"[BG-Logger] Error saving configuration: {ex}");
+            }
+        }
+
+        private List<string> GetCurrentShopMinionIds()
+        {
+            try
+            {
+                var game = Core.Game;
+                if (game?.PlayerEntity == null)
+                    return new List<string>();
+
+                var playerId = game.PlayerEntity.GetTag(GameTag.PLAYER_ID);
+                
+                // Get current shop minions using the same logic as BattlegroundsStateExtractor
+                var shopMinions = game.Entities.Values
+                    .Where(e => e.GetTag(GameTag.ZONE) == (int)Zone.PLAY &&
+                               e.Card != null &&
+                               !string.IsNullOrEmpty(e.Card.Name) &&
+                               e.GetTag(GameTag.IS_BACON_POOL_MINION) == 1 &&
+                               e.GetTag(GameTag.CONTROLLER) != playerId &&
+                               e.GetTag(GameTag.CARDTYPE) == (int)CardType.MINION)
+                    .OrderBy(e => e.GetTag(GameTag.ZONE_POSITION))
+                    .Select(e => $"{e.Card.Name}_{e.Id}") // Use name + entity ID for uniqueness
+                    .ToList();
+
+                return shopMinions;
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"[BG-Logger] Error getting shop minion IDs: {ex}");
+                return new List<string>();
             }
         }
 
